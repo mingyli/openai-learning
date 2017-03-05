@@ -3,7 +3,7 @@ from gym import wrappers
 import numpy as np
 
 env = gym.make('FrozenLake-v0')
-env = wrappers.Monitor(env, './experiments/frozenlake-v0', force=True)
+# env = wrappers.Monitor(env, './experiments/frozenlake-v0', force=True)
 
 Q = np.random.rand(env.observation_space.n, env.action_space.n)
 Q = Q / 10 ** 5
