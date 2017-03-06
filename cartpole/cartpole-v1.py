@@ -1,13 +1,13 @@
 import gym
+from gym import wrappers
 import numpy as np
 
-
-def train(alpha=0.1, gamma=0.7, num_episodes=5000, epsilon=0.7):
+def train(alpha=0.3, gamma=0.99, num_episodes=5000, epsilon=0.7):
     rewards = [0 for _ in range(100)]
     for i in range(num_episodes):
         obs0 = env.reset()
         ep_reward = 0
-        for t in range(200):
+        for t in range(600):
             # env.render()
             if np.random.random_sample() < epsilon:
                 action = env.action_space.sample()
@@ -16,11 +16,11 @@ def train(alpha=0.1, gamma=0.7, num_episodes=5000, epsilon=0.7):
             obs1, reward, done, info = env.step(action)
             Q[d.discretize(obs0) + [action]] += \
                    alpha*(reward + gamma*np.max(Q[d.discretize(obs1)]) - Q[d.discretize(obs0) + [action]])
-            if done and t < 10:
-                Q[d.discretize(obs0) + [action]] -= 10 ** -1
+            if done and t < i * 150/num_episodes:
+                Q[d.discretize(obs0) + [action]] -= 10 ** 1
             ep_reward += reward
             obs0 = obs1
-            epsilon -= 1 * 10 ** -4
+            epsilon -= 3 * 10 ** -6
             if done:
                 break
         rewards.append(ep_reward)
@@ -58,9 +58,10 @@ class Discretizer:
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1')
+    # env = wrappers.Monitor(env, './experiments/cartpole-v1', force=True)
     intervals = (20,20,20,20)
     limits = (4.8, 10, 0.42, 10)
     Q = np.random.rand(*intervals, env.action_space.n) / 10 ** 7
     d = Discretizer(intervals, limits)
     train()
-    simulate()
+    # simulate()
