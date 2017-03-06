@@ -2,25 +2,30 @@ import gym
 from gym import wrappers
 import numpy as np
 
-def train(alpha=0.3, gamma=0.99, num_episodes=5000, epsilon=0.7):
+def train(alpha=0.3, gamma=0.99, num_episodes=5001, epsilon=0.6):
     rewards = [0 for _ in range(100)]
     for i in range(num_episodes):
         obs0 = env.reset()
         ep_reward = 0
         for t in range(600):
             # env.render()
+            disc = d.discretize(obs0)
             if np.random.random_sample() < epsilon:
                 action = env.action_space.sample()
             else:
-                action = np.argmax(Q[d.discretize(obs0)])
+                action = np.argmax(Q[disc])
             obs1, reward, done, info = env.step(action)
-            Q[d.discretize(obs0) + [action]] += \
-                   alpha*(reward + gamma*np.max(Q[d.discretize(obs1)]) - Q[d.discretize(obs0) + [action]])
-            if done and t < i * 150/num_episodes:
-                Q[d.discretize(obs0) + [action]] -= 10 ** 1
+            Q[disc + [action]] += \
+                   alpha*(reward + gamma*np.max(Q[d.discretize(obs1)]) - Q[disc + [action]])
+            #penalize or reward heavily if complete
+            if done:
+                if t < i * 300/num_episodes:
+                    Q[disc + [action]] -= 10 ** 1
+                elif t > i * 450/num_episodes:
+                    Q[disc + [action]] += 10 ** 1
             ep_reward += reward
             obs0 = obs1
-            epsilon -= 3 * 10 ** -6
+            epsilon -= 2 * 10 ** -6
             if done:
                 break
         rewards.append(ep_reward)
@@ -58,7 +63,7 @@ class Discretizer:
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1')
-    # env = wrappers.Monitor(env, './experiments/cartpole-v1', force=True)
+    env = wrappers.Monitor(env, './experiments/cartpole-v1', force=True)
     intervals = (20,20,20,20)
     limits = (4.8, 10, 0.42, 10)
     Q = np.random.rand(*intervals, env.action_space.n) / 10 ** 7
