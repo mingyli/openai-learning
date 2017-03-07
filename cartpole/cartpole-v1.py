@@ -63,10 +63,10 @@ class Discretizer:
 
 if __name__ == '__main__':
     env = gym.make('CartPole-v1')
-    env = wrappers.Monitor(env, './experiments/cartpole-v1', force=True)
+    # env = wrappers.Monitor(env, './experiments/cartpole-v1', force=True)
     intervals = (20,20,20,20)
     limits = (4.8, 10, 0.42, 10)
     Q = np.random.rand(*intervals, env.action_space.n) / 10 ** 7
     d = Discretizer(intervals, limits)
     train()
-    # simulate()
+    simulate()
