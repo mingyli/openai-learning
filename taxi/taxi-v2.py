@@ -1,6 +1,6 @@
 import gym
-from gym import wrappers
 import numpy as np
+from gym import wrappers
 
 env = gym.make('Taxi-v2')
 # env = wrappers.Monitor(env, './experiments/taxi-v2', force=True)

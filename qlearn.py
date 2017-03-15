@@ -17,3 +17,4 @@ class QLearner:
 	def learn(self, obs0, obs1, action, reward, alpha=0.3, gamma=0.99):
 		self.Q[obs0 + [action]] += \
 			alpha * (reward + gamma * np.max(self.Q[obs1]) - self.Q[obs0 + [action]])
+			
