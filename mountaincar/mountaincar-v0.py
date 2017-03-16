@@ -5,23 +5,31 @@ from collections import deque
 env = gym.make('MountainCar-v0')
 
 class QLearner:
-	def __init__(self, observations, actions, epsilon=0.5):
+	def __init__(self, observations, actions, alpha=0.3, gamma=0.99, epsilon=0.5, d_epsilon=-10**-5):
 		self.observations = observations
 		self.actions = actions
+		self.alpha = alpha
+		self.gamma = gamma
 		self.epsilon = epsilon
-		self.Q = np.random.rand(*observations, actions) / 10**3
+		self.d_epsilon = d_epsilon
+		self.Q = np.random.rand(*observations, actions)
 
-	def act(self, obs, d_epsilon=-10**-5):
-		self.epsilon = max(0.0, self.epsilon + d_epsilon)
+	def act(self, obs):
+		self.epsilon = max(0.1, self.epsilon + self.d_epsilon)
 		if np.random.random() < self.epsilon:
 			return env.action_space.sample()
 		return np.argmax(self.Q[obs])
 
-	def learn(self, obs0, obs1, action, reward, done, t, alpha=0.3, gamma=0.99):
-		d_Q = alpha * (reward + gamma * np.max(self.Q[obs1]) - self.Q[obs0 + (action,)])
-		self.Q[obs0 + (action,)] += d_Q
-		if done and t < 180:
-			self.Q[obs0 + (action,)] += 10
+	def learn(self, obs0, obs1, action, reward, done, t):
+		target = reward + self.gamma * np.max(self.Q[obs1])
+		self.Q[obs0 + (action,)] += self.alpha * (target - self.Q[obs0 + (action,)])
+		if done:
+			self.Q[obs0 + (action,)] += (180 / (t-20) - 1) * 10 ** 3
+			if t > 195:
+				self.Q[obs0 + (action,)] -= 10
+
+	def __str__(self):
+		return "alpha: {}\ngamma: {}\nepsilon: {}".format(self.alpha, self.gamma, self.epsilon)
 
 class Discretizer:
 	'''
@@ -41,14 +49,15 @@ class Discretizer:
 			res.append(np.digitize(i, bucket, right=True))
 		return tuple(res)
 
-def simulate(episodes):
+def simulate(episodes, render=False):
 	moving_average = deque([0 for _ in range(episodes)])
 	for _ in range(episodes):
 		obs0 = env.reset()
 		disc0 = d.discretize(obs0)
 		ep_reward = 0
 		for t in range(200):
-			env.render()
+			if render:
+				env.render()
 			action = learner.act(disc0)
 			obs1, reward, done, info = env.step(action)
 			ep_reward += reward
@@ -58,22 +67,23 @@ def simulate(episodes):
 		moving_average.append(ep_reward)
 		moving_average.popleft()
 	print("moving average: ", sum(moving_average) / len(moving_average))
-	# print(learner.Q)
 
 if __name__ == '__main__':
-	intervals = (20,20)
+	intervals = (15,20)
 	limits = tuple([(l, h) for (l, h) in zip(env.observation_space.low, env.observation_space.high)])
 	d = Discretizer(intervals, limits)
-	learner = QLearner(intervals, env.action_space.n, epsilon=0.4)
-	for i in range(1000):
+	learner = QLearner(intervals, env.action_space.n, epsilon=1.0, alpha=0.2, gamma=0.99, d_epsilon=-1*10**-5)
+	for i in range(4000):
 		obs0 = env.reset()
 		disc0 = d.discretize(obs0)
 		for t in range(200):
-			action = learner.act(disc0, d_epsilon=-2*10**-5)
+			action = learner.act(disc0)
 			obs1, reward, done, info = env.step(action)
 			disc1 = d.discretize(obs1)
-			learner.learn(disc0, disc1, action, reward, done, t, alpha=0.2, gamma=0.99)
+			learner.learn(disc0, disc1, action, reward, done, t)
 			disc0 = disc1
 			if done:
 				break
-	simulate(1)
+	simulate(100)
+	simulate(1, render=True)
+	# print(learner)
