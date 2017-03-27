@@ -1,8 +1,10 @@
 import gym
 import numpy as np
+from gym import wrappers
 from collections import deque
 
 env = gym.make('MountainCar-v0')
+env = wrappers.Monitor(env, './experiments/mountaincar-v0', force=True)
 
 class QLearner:
 	def __init__(self, observations, actions, alpha=0.3, gamma=0.99, epsilon=0.5, d_epsilon=-10**-5):
