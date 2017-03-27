@@ -1,2 +1,5 @@
 /gym
 /universe
+/keras-mnist
+
+*.json
