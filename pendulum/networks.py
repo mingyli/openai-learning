@@ -42,7 +42,11 @@ class ActorNetwork:
         return self.target.predict_on_batch(state_batch)
     
     def update_target(self):
-        self.target.set_weights(self.actor.get_weights())
+        actor_weights = self.actor.get_weights()
+        target_weights = self.target.get_weights()
+        for i in xrange(len(actor_weights)):
+            target_weights[i] = self.tau * actor_weights[i] + (1-self.tau) * target_weights[i]
+        self.target.set_weights(target_weights)
 
 class CriticNetwork:
     """
@@ -88,4 +92,8 @@ class CriticNetwork:
         self.critic.train_on_batch(input_batch, target_batch)
 
     def update_target(self):
-        self.target.set_weights(self.critic.get_weights())
+        critic_weights = self.critic.get_weights()
+        target_weights = self.target.get_weights()
+        for i in xrange(len(critic_weights)):
+            target_weights[i] = self.tau * critic_weights[i] + (1-self.tau) * target_weights[i]
+        self.target.set_weights(target_weights)
