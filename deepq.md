@@ -15,7 +15,7 @@ Deep Q Network
 		calculate target for each minibatch transition:
 			if ss' is terminal state then tt = rr
 			else tt = rr + gamma * max_action Q(ss', aa')
-		train Q network using loss (tt - Q(ss, aa))
+		train Q network using loss (tt - Q(ss, aa))^2
 		s = s'
 
 

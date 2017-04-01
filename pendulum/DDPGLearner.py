@@ -1,5 +1,4 @@
 import numpy as np
-import gym
 import keras
 from keras.models import *
 from keras.layers import *
@@ -18,8 +17,9 @@ class DDPGLearner:
         
         self.actor_target = self.create_actor(state_dim, action_dim)
         self.critic_target, _ = self.create_critic(state_dim, action_dim)
-        self.actor_target.set_weights(self.actor.get_weights())
-        self.critic_target.set_weights(self.critic.get_weights())
+        # self.actor_target.set_weights(self.actor.get_weights())
+        # self.critic_target.set_weights(self.critic.get_weights())
+        self.update_targets(tau=1.)
 
         # make actor trainer
         state_input = Input(shape=(state_dim,))
@@ -53,7 +53,7 @@ class DDPGLearner:
         model.compile(loss='mse', optimizer='rmsprop')
 
         for i in model.layers:
-            i.trainable = False # froze the layers
+            i.trainable = False 
 
         frozen_model = Model(input=[state_input,action_input],output=out)
         frozen_model.compile(loss='mse', optimizer='rmsprop')
@@ -63,9 +63,9 @@ class DDPGLearner:
         actor_weights, critic_weights = self.actor.get_weights(), self.critic.get_weights()
         actor_target_weights, critic_target_weights = self.actor_target.get_weights(), self.critic_target.get_weights()
         for i in range(len(actor_weights)):
-            actor_target_weights = tau * actor_weights[i] + (1-tau) * actor_target_weights[i]
+            actor_target_weights[i] = tau * actor_weights[i] + (1-tau) * actor_target_weights[i]
         for i in range(len(critic_weights)):
-            critic_target_weights = tau * critic_weights[i] + (1-tau) * critic_target_weights[i]
+            critic_target_weights[i] = tau * critic_weights[i] + (1-tau) * critic_target_weights[i]
         self.actor_target.set_weights(actor_target_weights)
         self.critic_target.set_weights(critic_target_weights)
 
@@ -88,38 +88,8 @@ class DDPGLearner:
             # pdb.set_trace()
 
             self.critic.train_on_batch([np.array(s0_batch), np.array(a_batch)], targets)#, batch_size=MINIBATCH_SIZE)
-            print("REACHEADHCAEHACHEAHC")
             self.actor_trainer.train_on_batch(np.array(s0_batch), targets)#, batch_size=MINIBATCH_SIZE)
-            print("REACHEADHCAEHACHEAHC")
             self.update_targets()
     
 
-if __name__ == '__main__':
-    env = gym.make('Pendulum-v0')
-    max_steps = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    action_bound = env.action_space.high[0]
 
-    learner = DDPGLearner(state_dim, action_dim, action_bound)
-
-    total = 0
-    for episode in range(1000):
-        obs0 = env.reset()
-        ep_reward = 0
-        for t in range(max_steps):
-            if episode % 25 == 0:
-                # env.render()
-                pass
-            action = learner.act(obs0)
-            obs1, reward, done, info = env.step(action)
-            doneint = 1.0 if done else 0.
-            learner.replay_buffer.add(obs0, action, reward, t, doneint, obs1)
-            learner.train()
-
-            obs0 = obs1
-            ep_reward += reward
-            if done:
-                break
-        total += ep_reward
-        print("Episode {0:8d}: {1:4d} timesteps, {2:4f} average".format(episode, t, total/(episode+1)))

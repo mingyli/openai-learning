@@ -1,7 +1,7 @@
 import keras
 from keras import backend as K
 from keras.models import Sequential
-from keras.layers import Activation, Dense
+from keras.layers import Activation, Dense, Flatten, Input
 
 class ActorNetwork:
     """
@@ -17,7 +17,8 @@ class ActorNetwork:
         self.actor = Sequential()
         self.target = Sequential()
         first_layer = Dense(16, 
-                            input_dim = self.state_dim,
+                            # input_dim = self.state_dim,
+                            input_shape = (3,),
                             init = 'uniform',
                             activation = 'relu')
         self.actor.add(first_layer)
@@ -33,10 +34,16 @@ class ActorNetwork:
                            loss = 'mse')
         self.target.compile(optimizer = 'rmsprop',
                             loss = 'mse')
+        self.target.set_weights(self.actor.get_weights())
 
     def act(self, state):
         pred = self.actor.predict(state.reshape(1, self.state_dim))
         return pred.reshape(1, self.action_dim)
+
+    def learn(self, state_batch, action_grads):
+        # TODO need to use backend to train using gradients. get policy gradients
+        # by combining critic and actor
+        pass
 
     def predict_target(self, state_batch):
         return self.target.predict_on_batch(state_batch)
@@ -44,7 +51,7 @@ class ActorNetwork:
     def update_target(self):
         actor_weights = self.actor.get_weights()
         target_weights = self.target.get_weights()
-        for i in xrange(len(actor_weights)):
+        for i in range(len(actor_weights)):
             target_weights[i] = self.tau * actor_weights[i] + (1-self.tau) * target_weights[i]
         self.target.set_weights(target_weights)
 
@@ -78,22 +85,24 @@ class CriticNetwork:
                            loss = 'mse')
         self.target.compile(optimizer = 'rmsprop',
                             loss = 'mse')
+        self.target.set_weights(self.critic.get_weights())
 
+    def learn(self, input_batch, target_batch):
+        """
+        takes in a batch of (state, action) vectors and target Q values
+        returns loss
+        """
+        return self.critic.train_on_batch(input_batch, target_batch)
+    
     def predict_target(self, batch):
         """
         takes in a batch of (state, action) vectors and returns Q values
         """
         return self.target.predict_on_batch(batch)
 
-    def learn(self, input_batch, target_batch):
-        """
-        takes in a batch of (state, action) vectors and target Q values
-        """
-        self.critic.train_on_batch(input_batch, target_batch)
-
     def update_target(self):
         critic_weights = self.critic.get_weights()
         target_weights = self.target.get_weights()
-        for i in xrange(len(critic_weights)):
+        for i in range(len(critic_weights)):
             target_weights[i] = self.tau * critic_weights[i] + (1-self.tau) * target_weights[i]
         self.target.set_weights(target_weights)

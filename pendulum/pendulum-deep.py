@@ -23,6 +23,8 @@ if __name__ == '__main__':
         obs0 = env.reset()
         ep_reward = 0
         for t in range(max_steps):
+            if episode % 25 == 0:
+                env.render()
             action = actor.act(obs0) # TODO add noise for exploration
             obs1, reward, done, info = env.step(action)
             replay_buffer.add(obs0.reshape(state_dim), action.reshape(action_dim), reward, t, obs1.reshape(state_dim))
@@ -35,14 +37,16 @@ if __name__ == '__main__':
                 q_target_batch = critic.predict_target(np.hstack((s1_batch, actor_target_batch)))
                 target_batch = r_batch + GAMMA * q_target_batch
 
-                critic.learn(np.hstack((s0_batch, a_batch)), target_batch)
+                loss = critic.learn(np.hstack((s0_batch, a_batch)), target_batch)
                 # TODO update actor policy
+                
                 actor.update_target()
                 critic.update_target()
 
             obs0 = obs1
             ep_reward += reward[0]
             if done:
-                break
+                break        
         total += ep_reward
         print("Episode {0:8d}: {1:4d} timesteps, {2:4f} average".format(episode, t, total/(episode+1)))
+        print(loss)
