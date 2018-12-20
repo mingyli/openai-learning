@@ -3,5 +3,4 @@
 /keras-mnist
 
 *.json
-*.mp4
 *.pyc
